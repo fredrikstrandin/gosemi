@@ -1,0 +1,60 @@
+version: '3.4'
+networks:
+  backend:
+
+services:
+  calcmanager:
+    image: ${DOCKER_REGISTRY-}calcmanager
+    container_name: calcmanager
+    build:
+      context: ../src/CalcManager/
+      dockerfile: Dockerfile
+    ports:
+      - 5001:5000
+      - 2345:2345
+    security_opt:
+      - "seccomp:unconfined"
+    cap_add:
+      - SYS_PTRACE
+    networks:
+        - backend
+  
+  prometheus:
+    image: prom/prometheus:master
+    ports:
+      - 9000:9090
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - prometheus-data:/prometheus
+    command: --web.enable-lifecycle  --config.file=/etc/prometheus/prometheus.yml
+    networks:
+        - backend
+  
+  loki:
+    container_name: loki
+    image: grafana/loki:master
+    ports:
+       - 3100:3100
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+        test: wget -q --tries=1 -O- http://localhost:3100/ready 
+        interval: 3s
+        timeout: 3s
+        retries: 10
+        start_period: 10s
+    networks:
+        - backend
+  
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:master
+    ports:
+      - "3000:3000"
+    depends_on:
+        loki:
+            condition: service_healthy
+    networks:
+        - backend
+volumes:
+  prometheus-data:
+  grafana-data:

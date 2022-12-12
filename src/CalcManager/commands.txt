@@ -1,0 +1,2 @@
+docker build --tag godebug .
+docker run --security-opt="seccomp=unconfined" --cap-add=SYS_PTRACE -p:5001:5000 -p:2345:2345 godebug 
